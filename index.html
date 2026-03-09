@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --glass: rgba(255,255,255,0.07);
+      --glass2: rgba(255,255,255,0.13);
+      --border: rgba(255,255,255,0.1);
+      --text: #f1f5f9;
+      --muted: rgba(255,255,255,0.45);
+      --purple: #7c3aed;
+      --purple2: #a855f7;
+      --pink: #ec4899;
+      --gold: #f59e0b;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0d0d2b 0%, #1a0933 40%, #2d1b69 70%, #0d0d2b 100%);
+      color: var(--text);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .orb { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
+    .orb1 { width: 500px; height: 500px; background: rgba(124,58,237,0.3); top: -150px; left: -150px; }
+    .orb2 { width: 400px; height: 400px; background: rgba(236,72,153,0.2); bottom: -100px; right: -100px; }
+
+    /* ── HERO STAGE (centered, big) ── */
+    .hero-stage {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: auto;
+    }
+
+    /* After search: shrink to top bar */
+    .hero-stage.minimized {
+      top: 0; bottom: auto;
+      justify-content: flex-start;
+      flex-direction: row;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: rgba(13,13,43,0.7);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      gap: 1.5rem;
+    }
+
+    /* Logo */
+    .logo {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      text-align: center;
+      transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .logo .white { color: #fff; }
+    .logo .gold { color: var(--gold); }
+    /* Big state */
+    .hero-stage:not(.minimized) .logo {
+      font-size: clamp(3rem, 8vw, 6rem);
+      margin-bottom: 0.3rem;
+    }
+    /* Small state */
+    .hero-stage.minimized .logo {
+      font-size: 1.4rem;
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+
+    /* Tagline */
+    .tagline {
+      font-size: 0.85rem;
+      color: var(--muted);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 2.5rem;
+      transition: all 0.5s ease;
+      text-align: center;
+    }
+    .hero-stage.minimized .tagline { display: none; }
+
+    /* Search box */
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: var(--glass2);
+      backdrop-filter: blur(20px);
+      border: 1.5px solid var(--border);
+      border-radius: 18px;
+      padding: 0.3rem 0.3rem 0.3rem 1.2rem;
+      transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s, box-shadow 0.3s;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    }
+    .search-box:focus-within {
+      border-color: var(--purple2);
+      box-shadow: 0 0 0 3px rgba(168,85,247,0.2), 0 4px 24px rgba(0,0,0,0.3);
+    }
+    /* Big state */
+    .hero-stage:not(.minimized) .search-box {
+      width: min(520px, 90vw);
+    }
+    /* Small state */
+    .hero-stage.minimized .search-box {
+      width: 280px;
+      border-radius: 12px;
+      padding: 0.2rem 0.2rem 0.2rem 0.9rem;
+      flex: 1;
+      max-width: 340px;
+    }
+
+    .search-box input {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-family: 'Outfit', sans-serif; font-weight: 500; color: var(--text);
+      transition: font-size 0.5s ease;
+    }
+    .search-box input::placeholder { color: var(--muted); }
+    .hero-stage:not(.minimized) .search-box input { font-size: 1.1rem; padding: 0.85rem 0; }
+    .hero-stage.minimized .search-box input { font-size: 0.9rem; padding: 0.6rem 0; }
+
+    .search-box button {
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      border: none; color: #fff;
+      font-family: 'Outfit', sans-serif; font-weight: 600;
+      cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, all 0.5s ease;
+      box-shadow: 0 4px 16px rgba(124,58,237,0.4);
+    }
+    .search-box button:hover { transform: scale(1.05); }
+    .hero-stage:not(.minimized) .search-box button { border-radius: 14px; padding: 0.8rem 1.6rem; font-size: 1rem; }
+    .hero-stage.minimized .search-box button { border-radius: 10px; padding: 0.55rem 1rem; font-size: 0.82rem; }
+
+    /* ── MAIN CONTENT (hidden until searched) ── */
+    .main-content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem 3rem;
+      padding-top: 90px; /* space for top bar */
+      display: none;
+    }
+
+    .error-msg {
+      background: rgba(236,72,153,0.1); border: 1px solid rgba(236,72,153,0.3);
+      color: #f9a8d4; border-radius: 14px; padding: 0.8rem 1.2rem;
+      font-size: 0.9rem; text-align: center; margin-bottom: 1rem;
+      display: none; animation: fadeIn 0.3s ease;
+    }
+
+    .loader { display: none; justify-content: center; padding: 3rem; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--purple2); border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+    /* ── BENTO GRID ── */
+    .bento {
+      width: 100%;
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      animation: riseUp 0.6s cubic-bezier(0.22,1,0.36,1) both;
+    }
+
+    .tile {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 1.5rem;
+      transition: background 0.25s, transform 0.2s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      position: relative; overflow: hidden;
+    }
+    .tile:hover { background: var(--glass2); transform: translateY(-3px); box-shadow: 0 8px 28px rgba(124,58,237,0.2); }
+
+    .tile-main {
+      grid-column: span 2; grid-row: span 2;
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--glass2);
+    }
+    .tile-main::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(124,58,237,0.2) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .weather-emoji { font-size: 4rem; display: block; margin-bottom: 0.6rem; animation: float 3s ease-in-out infinite; filter: drop-shadow(0 4px 16px rgba(245,158,11,0.5)); }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+    .city-row { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.2rem; }
+    .city { font-family: 'Nunito', sans-serif; font-size: 1.8rem; font-weight: 900; }
+    .country-badge { background: rgba(255,255,255,0.12); border-radius: 8px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; }
+    .condition-text { font-size: 0.82rem; color: var(--purple2); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 1rem; }
+    .temp-display { font-family: 'Nunito', sans-serif; font-size: 5rem; font-weight: 900; line-height: 1; background: linear-gradient(135deg, #fff 30%, var(--purple2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .feels { font-size: 0.82rem; color: var(--muted); font-style: italic; margin-top: 0.4rem; }
+
+    .tile-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.4rem; }
+    .tile-icon { font-size: 1.8rem; margin-bottom: 0.5rem; display: block; }
+    .tile-value { font-family: 'Nunito', sans-serif; font-size: 1.5rem; font-weight: 800; line-height: 1; }
+    .tile-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+
+    .tile-wide { grid-column: span 2; display: flex; align-items: center; gap: 1.5rem; }
+    .tile-wide .tile-icon { font-size: 2.2rem; margin: 0; flex-shrink: 0; }
+    .tile-wide .tile-value { font-size: 1.7rem; }
+
+    footer { margin-top: 1.5rem; text-align: center; font-size: 0.72rem; color: var(--muted); }
+
+    .hero-footer { font-size: 0.75rem; color: var(--muted); margin-top: 2rem; letter-spacing: 0.08em; transition: all 0.5s ease; }
+    .hero-stage.minimized .hero-footer { display: none; }
+    @keyframes riseUp { from{opacity:0;transform:translateY(24px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes spin { to{transform:rotate(360deg)} }
+  </style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- HERO / TOP BAR (animates between states) -->
+<div class="hero-stage" id="heroStage">
+  <div class="logo"><span class="white">Weather</span> <span class="gold">App</span></div>
+  <div class="tagline">Real-time weather intelligence</div>
+  <div class="search-box">
+    <input type="text" id="cityInput" placeholder="Search a city…" autocomplete="off" />
+    <button onclick="fetchWeather()">Search</button>
+  </div>
+  <div class="hero-footer">Built by Anay</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content" id="mainContent">
+  <div class="error-msg" id="errorMsg"></div>
+  <div class="loader" id="loader"><div class="spinner"></div></div>
+
+  <div class="bento" id="bentoGrid">
+    <div class="tile tile-main">
+      <span class="weather-emoji" id="weatherEmoji">🌤️</span>
+      <div class="city-row">
+        <span class="city" id="cityDisplay">—</span>
+        <span class="country-badge" id="countryDisplay">—</span>
+      </div>
+      <div class="condition-text" id="conditionLabel">—</div>
+      <div class="temp-display" id="tempMain">—°</div>
+      <div class="feels" id="feelsLike">Feels like —°C</div>
+    </div>
+
+    <div class="tile">
+      <span class="tile-icon">💧</span>
+      <div class="tile-label">Humidity</div>
+      <div class="tile-value" id="humidity">—</div>
+    </div>
+    <div class="tile">
+      <span class="tile-icon">💨</span>
+      <div class="tile-label">Wind Speed</div>
+      <div class="tile-value" id="wind">—</div>
+      <div class="tile-sub">metres / sec</div>
+    </div>
+    <div class="tile">
+      <span class="tile-icon">🔵</span>
+      <div class="tile-label">Pressure</div>
+      <div class="tile-value" id="pressure">—</div>
+      <div class="tile-sub">hPa</div>
+    </div>
+
+    <div class="tile tile-wide">
+      <span class="tile-icon">🌡️</span>
+      <div>
+        <div class="tile-label">Min / Max Temp</div>
+        <div class="tile-value" id="minMax">— / —</div>
+      </div>
+    </div>
+    <div class="tile tile-wide">
+      <span class="tile-icon">🌅</span>
+      <div>
+        <div class="tile-label">Sunrise</div>
+        <div class="tile-value" id="sunrise">—</div>
+      </div>
+    </div>
+    <div class="tile tile-wide">
+      <span class="tile-icon">🌇</span>
+      <div>
+        <div class="tile-label">Sunset</div>
+        <div class="tile-value" id="sunset">—</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Powered by OpenWeatherMap · Built by Anay</footer>
+</div>
+
+<script>
+  const conditionEmoji = {'Clear':'☀️','Clouds':'☁️','Rain':'🌧️','Drizzle':'🌦️','Thunderstorm':'⛈️','Snow':'❄️','Mist':'🌫️','Fog':'🌫️','Haze':'🌫️','Smoke':'🌫️','Dust':'🌪️','Tornado':'🌪️'};
+
+  document.getElementById('cityInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchWeather();
+  });
+
+  async function fetchWeather() {
+    const city = document.getElementById('cityInput').value.trim();
+    if (!city) return;
+
+    const grid    = document.getElementById('bentoGrid');
+    const error   = document.getElementById('errorMsg');
+    const loader  = document.getElementById('loader');
+    const hero    = document.getElementById('heroStage');
+    const content = document.getElementById('mainContent');
+
+    // Minimize hero to top bar
+    hero.classList.add('minimized');
+    content.style.display = 'block';
+    grid.style.display    = 'none';
+    error.style.display   = 'none';
+    loader.style.display  = 'flex';
+
+    try {
+      const res  = await fetch(`/weather?city=${encodeURIComponent(city)}`);
+      const data = await res.json();
+      loader.style.display = 'none';
+
+      if (!res.ok) {
+        error.textContent   = data.error || 'Something went wrong.';
+        error.style.display = 'block';
+        return;
+      }
+
+      document.getElementById('weatherEmoji').textContent  = conditionEmoji[data.condition] || '🌤️';
+      document.getElementById('cityDisplay').textContent   = data.city;
+      document.getElementById('countryDisplay').textContent = data.country;
+      document.getElementById('conditionLabel').textContent = data.description;
+      document.getElementById('tempMain').textContent      = `${data.temp}°`;
+      document.getElementById('feelsLike').textContent     = `Feels like ${data.feels_like}°C`;
+      document.getElementById('minMax').textContent        = `${data.min_temp}° / ${data.max_temp}°`;
+      document.getElementById('humidity').textContent      = `${data.humidity}%`;
+      document.getElementById('wind').textContent          = `${data.wind} m/s`;
+      document.getElementById('pressure').textContent      = `${data.pressure}`;
+      document.getElementById('sunrise').textContent       = data.sunrise;
+      document.getElementById('sunset').textContent        = data.sunset;
+
+      grid.style.display = 'grid';
+      grid.style.animation = 'none';
+      void grid.offsetWidth;
+      grid.style.animation = 'riseUp 0.6s cubic-bezier(0.22,1,0.36,1) both';
+    } catch(err) {
+      loader.style.display = 'none';
+      error.textContent    = 'Could not connect. Is the server running?';
+      error.style.display  = 'block';
+    }
+  }
+</script>
+</body>
+</html>
