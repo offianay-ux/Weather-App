@@ -4,7 +4,7 @@ import time
 
 app = Flask(__name__)
 
-API_KEY = "5c2c6ab549b9f408d8406a2e2f7e3641"
+API_KEY = "                     "
 
 @app.route('/')
 def index():
